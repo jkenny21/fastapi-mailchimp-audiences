@@ -63,9 +63,9 @@ def create_user(user: User):
             try:
                 create_mailchimp_contact(user)
             except:
+                user.add_to_mailchimp = False
+                update_user(user.id, user)
                 raise Exception("Error adding contact to Mailchimp")
-            user.add_to_mailchimp = False
-            update_user(user.id, user)
 
         return user
 
