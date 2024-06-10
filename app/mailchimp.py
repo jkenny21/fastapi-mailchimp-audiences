@@ -1,17 +1,11 @@
-import os
 import mailchimp_marketing as MailchimpMarketing
 from mailchimp_marketing.api_client import ApiClientError
-from dotenv import load_dotenv
-
-load_dotenv()
-
-MAILCHIMP_API_KEY       = os.environ.get("MAILCHIMP_API_KEY")
-MAILCHIMP_SERVER_PREFIX = os.environ.get("MAILCHIMP_SERVER_PREFIX")
+from app.config import settings
 
 mailchimp_client = MailchimpMarketing.Client()
 mailchimp_client.set_config({
-    "api_key": MAILCHIMP_API_KEY,
-    "server":  MAILCHIMP_SERVER_PREFIX
+    "api_key": settings.MAILCHIMP_API_KEY,
+    "server":  settings.MAILCHIMP_SERVER_PREFIX
     })
 
 def create_audience(body):

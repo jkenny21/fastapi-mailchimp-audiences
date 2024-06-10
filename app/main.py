@@ -1,13 +1,10 @@
-import os
 from fastapi import HTTPException, FastAPI
 from sqlmodel import Session, select
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 from app.models import User
 from app.db import engine, create_tables
 from app.mailchimp import create_audience, create_contact
-
-load_dotenv()
+from app.config import settings
 
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
@@ -23,21 +20,21 @@ app = FastAPI(lifespan=lifespan)
 def create_audience():
     body = {
     "permission_reminder": "You signed up for updates on our website",
-    "email_type_option": False,
-    "campaign_defaults": {
-        "from_name": "Jalen",
+    "email_type_option":   False,
+    "campaign_defaults":   {
+        "from_name":  "Jalen",
         "from_email": "jtkenny21@gmail.com",
-        "subject": "Mailchimp Audience Test",
-        "language": "EN_US"
+        "subject":    "Mailchimp Audience Test",
+        "language":   "EN_US"
     },
-    "name": "Mailchimp Audience Test",
+    "name":    "Mailchimp Audience Test",
     "contact": {
-        "company": "Jalen",
+        "company":  "Jalen",
         "address1": "1234 West 1st Ave",
-        "city": "Vancouver",
-        "state": "BC",
-        "zip": "V7J5D5",
-        "country": "CA"
+        "city":     "Vancouver",
+        "state":    "BC",
+        "zip":      "V7J5D5",
+        "country":  "CA"
     }
     }
     create_audience(body)
@@ -45,17 +42,16 @@ def create_audience():
 
 @app.post("/mailchimp-contacts/")
 def create_contact():
-    list_id = os.environ.get("MAILCHIMP_AUDIENCE_ID")
 
     member_info = {
         "email_address": "jtkenny21+testcontact@gmail.com",
-        "status": "pending",
-        "merge_fields": {
-        "FNAME": "Jalen",
-        "LNAME": "Kenny"
+        "status":        "pending",
+        "merge_fields":  {
+            "FNAME": "Jalen",
+            "LNAME": "Kenny"
         }
     }
-    create_contact(list_id, member_info)
+    create_contact(settings.MAILCHIMP_AUDIENCE_ID, member_info)
 
 @app.post("/users/", response_model=User)
 def create_user(user: User):
