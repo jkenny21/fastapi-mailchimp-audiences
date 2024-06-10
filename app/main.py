@@ -9,6 +9,19 @@ from app.config import settings
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
 
+def create_mailchimp_contact(user: User):
+    member_info = {
+        "email_address": user.email,
+        "status":        "pending",
+        "merge_fields":  {
+            "FNAME": user.f_name,
+            "LNAME": user.l_name
+        }
+    }
+    create_contact(settings.MAILCHIMP_AUDIENCE_ID, member_info)
+
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_tables()
@@ -39,26 +52,21 @@ def create_audience():
     }
     create_audience(body)
 
-
-@app.post("/mailchimp-contacts/")
-def create_contact():
-
-    member_info = {
-        "email_address": "jtkenny21+testcontact@gmail.com",
-        "status":        "pending",
-        "merge_fields":  {
-            "FNAME": "Jalen",
-            "LNAME": "Kenny"
-        }
-    }
-    create_contact(settings.MAILCHIMP_AUDIENCE_ID, member_info)
-
 @app.post("/users/", response_model=User)
 def create_user(user: User):
     with Session(engine) as session:
         session.add(user)
         session.commit()
         session.refresh(user)
+
+        if user.add_to_mailchimp:
+            try:
+                create_mailchimp_contact(user)
+            except:
+                raise Exception("Error adding contact to Mailchimp")
+            user.add_to_mailchimp = False
+            update_user(user.id, user)
+
         return user
 
 @app.get("/users/", response_model=list[User])
