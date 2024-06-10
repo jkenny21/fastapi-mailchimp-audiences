@@ -6,12 +6,12 @@ from contextlib import asynccontextmanager
 from fastapi import HTTPException, FastAPI
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
+from pydantic_core import MultiHostUrl
+
 import mailchimp_marketing as MailchimpMarketing
 from mailchimp_marketing.api_client import ApiClientError
 
 load_dotenv()
-
-
 
 class User(SQLModel, table=True):
     id:               int | None = Field(default=None, primary_key=True)
@@ -20,11 +20,25 @@ class User(SQLModel, table=True):
     phone:            str | None = Field(index=True)
     marketing_status: str
 
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+MAILCHIMP_API_KEY       = os.environ.get("MAILCHIMP_API_KEY")
+MAILCHIMP_SERVER_PREFIX = os.environ.get("MAILCHIMP_SERVER_PREFIX")
+POSTGRES_USER           = os.environ.get("POSTGRES_USER")
+POSTGRES_PASSWORD       = os.environ.get("POSTGRES_PASSWORD")
+POSTGRES_DB             = os.environ.get("POSTGRES_DB")
+POSTGRES_SERVER         = os.environ.get("POSTGRES_SERVER")
+POSTGRES_PORT           = int( os.environ.get("POSTGRES_PORT") )
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
+SQLMODEL_DATABASE_URI = str( MultiHostUrl.build(
+                            scheme   = "postgresql+psycopg",
+                            username = POSTGRES_USER,
+                            password = POSTGRES_PASSWORD,
+                            host     = POSTGRES_SERVER,
+                            port     = POSTGRES_PORT,
+                            path     = POSTGRES_DB,
+                        ) )
+
+
+engine = create_engine(SQLMODEL_DATABASE_URI)
 
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
@@ -43,8 +57,8 @@ app = FastAPI(lifespan=lifespan)
 def create_audience():
     mailchimp = MailchimpMarketing.Client()
     mailchimp.set_config({
-    "api_key": os.environ.get("MAILCHIMP_API_KEY"),
-    "server":  os.environ.get("MAILCHIMP_SERVER_PREFIX")
+    "api_key": MAILCHIMP_API_KEY,
+    "server":  MAILCHIMP_SERVER_PREFIX
     })
 
     body = {
@@ -77,8 +91,8 @@ def create_audience():
 def create_contact():
     mailchimp = MailchimpMarketing.Client()
     mailchimp.set_config({
-    "api_key": os.environ.get("MAILCHIMP_API_KEY"),
-    "server":  os.environ.get("MAILCHIMP_SERVER_PREFIX")
+    "api_key": MAILCHIMP_API_KEY,
+    "server":  MAILCHIMP_SERVER_PREFIX
     })
 
     list_id = os.environ.get("MAILCHIMP_AUDIENCE_ID")
