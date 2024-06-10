@@ -6,45 +6,24 @@ from dotenv import load_dotenv
 from contextlib import asynccontextmanager
 
 from fastapi import HTTPException, FastAPI
-from sqlmodel import Session, SQLModel, create_engine, select
-
-from pydantic_core import MultiHostUrl
+from sqlmodel import Session, SQLModel, select
 
 from mailchimp_marketing.api_client import ApiClientError
 
 from app.models import User
+from app.db import engine, create_tables
 
 load_dotenv()
 
 MAILCHIMP_API_KEY       = os.environ.get("MAILCHIMP_API_KEY")
 MAILCHIMP_SERVER_PREFIX = os.environ.get("MAILCHIMP_SERVER_PREFIX")
-POSTGRES_USER           = os.environ.get("POSTGRES_USER")
-POSTGRES_PASSWORD       = os.environ.get("POSTGRES_PASSWORD")
-POSTGRES_DB             = os.environ.get("POSTGRES_DB")
-POSTGRES_SERVER         = os.environ.get("POSTGRES_SERVER")
-POSTGRES_PORT           = int( os.environ.get("POSTGRES_PORT") )
-
-SQLMODEL_DATABASE_URI = str( MultiHostUrl.build(
-                            scheme   = "postgresql+psycopg",
-                            username = POSTGRES_USER,
-                            password = POSTGRES_PASSWORD,
-                            host     = POSTGRES_SERVER,
-                            port     = POSTGRES_PORT,
-                            path     = POSTGRES_DB,
-                        ) )
-
-
-engine = create_engine(SQLMODEL_DATABASE_URI)
 
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
 
-async def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_and_tables()
+    await create_tables()
     yield
 
 app = FastAPI(lifespan=lifespan)
