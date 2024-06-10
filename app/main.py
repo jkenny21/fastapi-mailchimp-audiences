@@ -1,6 +1,8 @@
 import os
 from dotenv import load_dotenv
 
+from contextlib import asynccontextmanager
+
 from fastapi import HTTPException, FastAPI
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
@@ -9,13 +11,14 @@ from mailchimp_marketing.api_client import ApiClientError
 
 load_dotenv()
 
-app = FastAPI()
+
 
 class User(SQLModel, table=True):
-    id:    int | None = Field(default=None, primary_key=True)
-    name:  str        = Field(index=True)
-    email: str | None = Field(index=True)
-    phone: str | None = Field(index=True)
+    id:               int | None = Field(default=None, primary_key=True)
+    name:             str        = Field(index=True)
+    email:            str | None = Field(index=True)
+    phone:            str | None = Field(index=True)
+    marketing_status: str
 
 sqlite_file_name = "database.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
@@ -23,15 +26,18 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 connect_args = {"check_same_thread": False}
 engine = create_engine(sqlite_url, echo=True, connect_args=connect_args)
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
-
-@app.on_event("startup")
-def on_startup():
-    create_db_and_tables()
-
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
+
+async def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await create_db_and_tables()
+    yield
+
+app = FastAPI(lifespan=lifespan)
 
 @app.post("/mailchimp-audiences/")
 def create_audience():
