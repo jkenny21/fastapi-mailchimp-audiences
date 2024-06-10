@@ -1,24 +1,20 @@
 import os
+import mailchimp_marketing as MailchimpMarketing
+
 from dotenv import load_dotenv
 
 from contextlib import asynccontextmanager
 
 from fastapi import HTTPException, FastAPI
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Session, SQLModel, create_engine, select
 
 from pydantic_core import MultiHostUrl
 
-import mailchimp_marketing as MailchimpMarketing
 from mailchimp_marketing.api_client import ApiClientError
 
-load_dotenv()
+from app.models import User
 
-class User(SQLModel, table=True):
-    id:               int | None = Field(default=None, primary_key=True)
-    name:             str        = Field(index=True)
-    email:            str | None = Field(index=True)
-    phone:            str | None = Field(index=True)
-    marketing_status: str
+load_dotenv()
 
 MAILCHIMP_API_KEY       = os.environ.get("MAILCHIMP_API_KEY")
 MAILCHIMP_SERVER_PREFIX = os.environ.get("MAILCHIMP_SERVER_PREFIX")
