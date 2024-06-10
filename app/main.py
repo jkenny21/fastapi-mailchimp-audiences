@@ -1,22 +1,13 @@
 import os
-import mailchimp_marketing as MailchimpMarketing
-
-from dotenv import load_dotenv
-
-from contextlib import asynccontextmanager
-
 from fastapi import HTTPException, FastAPI
-from sqlmodel import Session, SQLModel, select
-
-from mailchimp_marketing.api_client import ApiClientError
-
+from sqlmodel import Session, select
+from dotenv import load_dotenv
+from contextlib import asynccontextmanager
 from app.models import User
 from app.db import engine, create_tables
+from app.mailchimp import create_audience, create_contact
 
 load_dotenv()
-
-MAILCHIMP_API_KEY       = os.environ.get("MAILCHIMP_API_KEY")
-MAILCHIMP_SERVER_PREFIX = os.environ.get("MAILCHIMP_SERVER_PREFIX")
 
 def raise_user_404():
     raise HTTPException(status_code=404, detail="User not found")
@@ -30,12 +21,6 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/mailchimp-audiences/")
 def create_audience():
-    mailchimp = MailchimpMarketing.Client()
-    mailchimp.set_config({
-    "api_key": MAILCHIMP_API_KEY,
-    "server":  MAILCHIMP_SERVER_PREFIX
-    })
-
     body = {
     "permission_reminder": "You signed up for updates on our website",
     "email_type_option": False,
@@ -55,21 +40,11 @@ def create_audience():
         "country": "CA"
     }
     }
+    create_audience(body)
 
-    try:
-      response = mailchimp.lists.create_list(body)
-      print("Response: {}".format(response))
-    except ApiClientError as error:
-      print("An exception occurred: {}".format(error.text))
 
-@app.post("/mailchimp-contacts")
+@app.post("/mailchimp-contacts/")
 def create_contact():
-    mailchimp = MailchimpMarketing.Client()
-    mailchimp.set_config({
-    "api_key": MAILCHIMP_API_KEY,
-    "server":  MAILCHIMP_SERVER_PREFIX
-    })
-
     list_id = os.environ.get("MAILCHIMP_AUDIENCE_ID")
 
     member_info = {
@@ -80,13 +55,7 @@ def create_contact():
         "LNAME": "Kenny"
         }
     }
-
-    try:
-        response = mailchimp.lists.add_list_member(list_id, member_info)
-        print("response: {}".format(response))
-    except ApiClientError as error:
-        print("An exception occurred: {}".format(error.text))
-
+    create_contact(list_id, member_info)
 
 @app.post("/users/", response_model=User)
 def create_user(user: User):
